@@ -11,6 +11,11 @@
 # production
 /build
 /.vscode
+/src/public/images/news
+/src/public/images/tour
+/src/public/images/tourist_place
+/src/public/images/user_avatar
+
 # misc
 .DS_Store
 .env.local

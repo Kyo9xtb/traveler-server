@@ -1,6 +1,7 @@
-const mySqlDB = require("../config/dbConfig");
-
 const getHomePage = (req, res) => {
-  res.render("index", { title: "Traveler Server" });
+    res.render('index', { title: 'SaoViet Travel Server' });
 };
- module.exports = {getHomePage};
+const getHomePageApi = (req, res) => {
+    res.render('index', { title: 'SaoViet Travel Server Api Services' });
+};
+module.exports = { getHomePage, getHomePageApi };
