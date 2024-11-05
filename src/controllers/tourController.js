@@ -2,15 +2,10 @@ const Tour = require('../models/tourModel');
 
 const handlerGetTour = (req, res, next) => {
     try {
-        if (req.params.id) {
-            Tour.getTourById(req.params.id, (resStatus, resMessage, resData) => {
-                res.status(200).json({ status: resStatus, message: resMessage, result: resData });
-            });
-        } else {
-            Tour.getAllTour((resStatus, resMessage, resData) => {
-                res.status(200).json({ status: resStatus, message: resMessage, result: resData });
-            });
-        }
+        console.log(req.query);
+        Tour.getTour(req.params.id, (resStatus, resMessage, resData) => {
+            res.status(200).json({ status: resStatus, message: resMessage, result: resData });
+        });
     } catch (error) {
         next(error);
     }

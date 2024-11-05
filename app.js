@@ -3,6 +3,8 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 require('dotenv').config();
+const cors = require('cors');
+
 const routes = require('./src/routes');
 const configViewEngine = require('./src/config/viewEngine');
 
@@ -10,7 +12,9 @@ const app = express();
 
 // view engine setup
 app.use(logger('dev'));
-
+// app.use(logger('common'));
+const corsOptions = { origin: ['http://localhost:3000', 'http://192.168.1.35:3000'], optionsSuccessStatus: 200 };
+app.use(cors(corsOptions));
 //config req.body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

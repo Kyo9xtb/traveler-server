@@ -1,5 +1,11 @@
 const pool = require('../config/dbConfig');
-const { handelrCreateFolder, handlerCopyFile, handlerDeleteFile, handelrDeleteFolder } = require('./handlerModel');
+const {
+    handelrCreateFolder,
+    handlerCopyFile,
+    handlerDeleteFile,
+    handelrDeleteFolder,
+    ChangeToSlug,
+} = require('./handlerModel');
 const Tour = {};
 function DataFormat(data) {
     let results = [];
@@ -17,7 +23,9 @@ function DataFormat(data) {
         let tour = {
             tour_id: item.TourId,
             tour_name: item.TourName,
+            slug: item.TourName ? ChangeToSlug(item.TourName) : null,
             tour_group: item.TourGroup,
+            description:item.Description,
             area: item.Area,
             price: item.Price,
             sale: item.Sale,
@@ -42,35 +50,46 @@ function DataFormat(data) {
     });
     return results;
 }
-Tour.getAllTour = async (callback) => {
+Tour.getTour = async (slugIn, callback) => {
     try {
-        let [results] = await pool.query(`
+        let [results] = await pool.query(
+            `
             SELECT * FROM \`tb_tour\`
-            `);
-        callback(true, 'Get all tour information successfully', DataFormat(results));
+            `,
+        );
+        if (slugIn) {
+            const result = DataFormat(results).find(({ slug }) => slug === slugIn);
+            if (result) {
+                callback(true, `Get tour information ${slugIn} successfully`, result);
+            } else {
+                callback(false, `Get tour information ${slugIn} does not exist`);
+            }
+        } else {
+            callback(true, 'Get all tour information successfully', DataFormat(results));
+        }
     } catch (error) {
         callback(false, 'Get all tour information failed', error);
     }
 };
 
-Tour.getTourById = async (id, callback) => {
-    try {
-        let [result] = await pool.query(
-            `
-                SELECT * FROM \`tb_tour\`
-                WHERE TourId =?
-            `,
-            [id],
-        );
-        if (result.length) {
-            callback(true, `Get tour id ${id} successfully`, DataFormat(result));
-        } else {
-            callback(false, `Tour information id ${id} does not exist`);
-        }
-    } catch (error) {
-        callback(false, `Get tour information id ${id} failed`, error);
-    }
-};
+// Tour.getTourById = async (id, callback) => {
+//     try {
+//         let [result] = await pool.query(
+//             `
+//                 SELECT * FROM \`tb_tour\`
+//                 WHERE TourId =?
+//             `,
+//             [id],
+//         );
+//         if (result.length) {
+//             callback(true, `Get tour id ${id} successfully`, DataFormat(result));
+//         } else {
+//             callback(false, `Tour information id ${id} does not exist`);
+//         }
+//     } catch (error) {
+//         callback(false, `Get tour information id ${id} failed`, error);
+//     }
+// };
 
 Tour.createTour = async (req, callback) => {
     let { thumbnail, detailed_image } = req.files;

@@ -17,4 +17,4 @@ Router.use('/user', userApi);
 Router.use('/contact', contactApi);
 Router.use('/', productApi);
 
-module.exports = Router;
+module.exports = Router; 

@@ -1,5 +1,11 @@
 const pool = require('../config/dbConfig');
-const { handelrCreateFolder, handlerCopyFile, handelrDeleteFolder, handlerDeleteFile } = require('./handlerModel');
+const {
+    handelrCreateFolder,
+    handlerCopyFile,
+    handelrDeleteFolder,
+    handlerDeleteFile,
+    ChangeToSlug,
+} = require('./handlerModel');
 
 const News = {};
 function DataFormat(data) {
@@ -18,6 +24,8 @@ function DataFormat(data) {
         let news = {
             news_id: item.NewsId,
             title: item.Title,
+            slug: item.Title ? ChangeToSlug(item.Title) : null,
+            meta_title: item.Title,
             gender: item.Gender,
             description: item.Description,
             content: item.Content,
@@ -33,36 +41,56 @@ function DataFormat(data) {
     });
     return results;
 }
-News.getNews = async (callback) => {
+News.getNews = async (slugIn, callback) => {
     try {
-        let [result] = await pool.query(
+        let [results] = await pool.query(
             `
                 SELECT * FROM \`tb_news\`
             `,
         );
-        callback(true, 'Get news information successfully', DataFormat(result));
+        if (slugIn) {
+            const result = DataFormat(results).find(({ slug }) => slug === slugIn);
+            if (result) {
+                callback(true, `Get news information ${slugIn} successfully`, result);
+            } else {
+                callback(false, `Get news information ${slugIn} does not exist`);
+            }
+        } else {
+            callback(true, 'Get news information successfully', DataFormat(results));
+        }
     } catch (error) {
+        console.log(error);
         callback(false, 'Get news information failed', error);
     }
 };
-News.getNewsById = async (id, callback) => {
-    try {
-        let [result] = await pool.query(
-            `
-                SELECT * FROM \`tb_news\`
-                WHERE NewsId = ?
-            `,
-            [id],
-        );
-        if (result.length) {
-            callback(true, `Get news id information ${id} successfully`, DataFormat(result));
-        } else {
-            callback(false, `Get news id information ${id} does not exist`);
-        }
-    } catch (error) {
-        callback(false, `Get news id information ${id} failed`, error);
-    }
-};
+// News.getNewsById = async (id, callback) => {
+//     try {
+//         // let [result] = await pool.query(
+//         //     `
+//         //         SELECT * FROM \`tb_news\`
+//         //         WHERE NewsId = ?
+//         //     `,
+//         //     [id],
+//         // );
+//         let [results] = await pool.query(
+//             `
+//                 SELECT * FROM \`tb_news\`
+//             `,
+//         );
+//         // console.log(DataFormat(results));
+
+//         const result = DataFormat(results).find(({ slug }) => slug === id);
+//         console.log(result);
+
+//         if (result) {
+//             callback(true, `Get news id information ${id} successfully`, result);
+//         } else {
+//             callback(false, `Get news id information ${id} does not exist`);
+//         }
+//     } catch (error) {
+//         callback(false, `Get news id information ${id} failed`, error);
+//     }
+// };
 
 News.createNews = async (req, callback) => {
     let { thumbnail, detailed_image } = req.files;
