@@ -1,4 +1,5 @@
 const pool = require('../config/dbConfig');
+const { formatDatetime } = require('./handleModel');
 const BookTour = {};
 
 function BookTourFormat(data) {
@@ -7,7 +8,7 @@ function BookTourFormat(data) {
         let bookTour = {
             book_tour_id: item.BookTourId,
             user_id: item.UserId,
-            user: item.user[0],
+            cancellation_reason: item.CancellationReason,
             full_name: item.FullName,
             email: item.Email,
             phone_number: item.PhoneNumber,
@@ -15,8 +16,9 @@ function BookTourFormat(data) {
             note: item.Note,
             total_price: item.TotalPrice,
             status: item.Status,
-            create_at: item.CreateAt,
+            created_at: item.CreatedAt,
             update_at: item.UpdateAt,
+            payment_method: item.PaymentMethod,
             select_booking: item.tourBookingDetails,
         };
         results.push(bookTour);
@@ -90,15 +92,6 @@ BookTour.getAllBookTour = async (callback) => {
                 `,
                 [item.BookTourId],
             );
-            let [resultUser] = await pool.query(
-                `
-                    SELECT * FROM \`tb_user\` 
-                    WHERE UserId = ?
-                `,
-                [item.UserId],
-            );
-            item.user = UserFormat(resultUser);
-            // item.tourBookingDetails1 = BookingDetailsFormat1(resultBooking);
             await BookingDetails(resultBooking).then((data) => {
                 item.tourBookingDetails = TourFormatSelect(data);
             });
@@ -129,35 +122,37 @@ BookTour.getBookTourId = async (id, callback) => {
                 `,
                 [item.BookTourId],
             );
-            let [resultUser] = await pool.query(
-                `
-                    SELECT * FROM \`tb_user\` 
-                    WHERE UserId = ?
-                `,
-                [item.UserId],
-            );
-            item.user = UserFormat(resultUser);
+            // let [resultUser] = await pool.query(
+            //     `
+            //         SELECT * FROM \`tb_user\`
+            //         WHERE UserId = ?
+            //     `,
+            //     [item.UserId],
+            // );
+            // item.user = UserFormat(resultUser);
             await BookingDetails(resultBooking).then((data) => {
                 item.tourBookingDetails = TourFormatSelect(data);
             });
             return item;
         });
         const updatedResults = await Promise.all(promises);
-        callback(true, 'Get information book tour successfully', BookTourFormat(updatedResults));
+        callback(true, 'Get information book tour successfully', BookTourFormat(updatedResults)[0]);
     } catch (error) {
         callback(false, 'Get information book tour failed', error);
     }
 };
 BookTour.createBookTour = async (req, callback) => {
-    let { UserId, Email, FullName, PhoneNumber, Address, Note, TotalPrice, tourBookingDetails } = req.body;
-    UserId = UserId ? UserId.trim() : null;
-    Email = Email ? Email.trim() : null;
-    FullName = FullName ? FullName.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Address = Address ? Address.trim() : null;
-    Note = Note ? Note.trim() : null;
-    TotalPrice = TotalPrice ? TotalPrice.trim() : null;
-    if (Array.isArray(tourBookingDetails)) {
+    let { user_id, email, phone_number, full_name, address, note, total_price, select_booking, payment_method } =
+        req.body;
+    user_id = user_id ? user_id.toString().trim() : null;
+    full_name = full_name ? full_name.toString().trim() : null;
+    email = email ? email.toString().trim() : null;
+    phone_number = phone_number ? phone_number.toString().trim() : null;
+    address = address ? address.toString().trim() : null;
+    note = note ? note.toString().trim() : null;
+    payment_method = payment_method ? payment_method.toString().trim() : null;
+    total_price = total_price ? total_price.toString().trim() : null;
+    if (Array.isArray(select_booking)) {
         try {
             let [result] = await pool.query(
                 `
@@ -169,12 +164,17 @@ BookTour.createBookTour = async (req, callback) => {
                             PhoneNumber,
                             Address,
                             Note,
-                            TotalPrice
+                            TotalPrice,
+                            PaymentMethod
                         )
-                    VALUES (?,?,?,?,?,?,?)`,
-                [UserId, Email, FullName, PhoneNumber, Address, Note, TotalPrice],
+                    VALUES (?,?,?,?,?,?,?,?)`,
+                [user_id, email, full_name, phone_number, address, note, total_price, payment_method],
             );
-            tourBookingDetails.forEach(async (item) => {
+            select_booking.forEach(async (item) => {
+                const { departure_date } = item;
+                const formattedDepartureDate = departure_date
+                    ? formatDatetime(item.departure_date.split('/').reverse().join('-'))
+                    : null;
                 await pool.query(
                     `
                     INSERT INTO \`tb_tour-booking-details\` 
@@ -190,41 +190,55 @@ BookTour.createBookTour = async (req, callback) => {
                     VALUES (?,?,?,?,?,?,?)`,
                     [
                         result.insertId,
-                        item.TourId,
-                        item.TourName,
-                        item.Price,
-                        item.Quantity,
-                        item.GuestType,
-                        item.DepartureDate,
+                        item.tour_id,
+                        item.tour_name,
+                        item.price,
+                        item.quantity,
+                        item.customer_type,
+                        formattedDepartureDate,
                     ],
                 );
+                // console.log(item.departure_date.split('/').reverse().join("-"));
             });
             callback(true, `Create book tour successfully`);
         } catch (error) {
             console.log(error);
-
             callback(false, `Create book tour failed`, error);
         }
     } else {
-        callback(false, `Create book tour failed`);
+        callback(false, `Create book tour failed******`);
     }
 };
 
 BookTour.updateBookTour = async (req, callback) => {
     let { id } = req.params;
-    let { UserId, Email, FullName, PhoneNumber, Address, Note, TotalPrice, tourBookingDetails, Status } = req.body;
-    UserId = UserId ? UserId.trim() : null;
-    Email = Email ? Email.trim() : null;
-    FullName = FullName ? FullName.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Address = Address ? Address.trim() : null;
-    Note = Note ? Note.trim() : null;
-    TotalPrice = TotalPrice ? TotalPrice.trim() : null;
-    Status = Status ? Status.trim() : 'Pending';
+    let {
+        user_id,
+        email,
+        phone_number,
+        full_name,
+        address,
+        note,
+        total_price,
+        select_booking,
+        payment_method,
+        status,
+        cancellation_reason,
+    } = req.body;
+    user_id = user_id ? user_id.toString().trim() : null;
+    email = email ? email.toString().trim() : null;
+    full_name = full_name ? full_name.toString().trim() : null;
+    phone_number = phone_number ? phone_number.toString().trim() : null;
+    address = address ? address.toString().trim() : null;
+    note = note ? note.toString().trim() : null;
+    total_price = total_price ? total_price.toString().trim() : null;
+    payment_method = payment_method ? payment_method.toString().trim() : null;
+    cancellation_reason = cancellation_reason ? cancellation_reason.toString().trim() : null;
+    status = status ? status.toString().trim() : 'Pending';
     const [result] = await pool.query(
         `
             SELECT * FROM \`tb_book-tour\`
-            WHERE BookTourId = ?
+            WHERE BookTourId = ? 
         `,
         [id],
     );
@@ -239,12 +253,25 @@ BookTour.updateBookTour = async (req, callback) => {
                         Address = ?,
                         Note = ?,
                         TotalPrice = ?,
-                        Status = ?
+                        Status = ?,
+                        PaymentMethod = ?,
+                        CancellationReason = ?
                     WHERE BookTourId = ?
                 `,
-                [FullName, Email, PhoneNumber, Address, Note, TotalPrice, Status, id],
+                [
+                    full_name,
+                    email,
+                    phone_number,
+                    address,
+                    note,
+                    total_price,
+                    status,
+                    payment_method,
+                    cancellation_reason,
+                    id,
+                ],
             );
-            tourBookingDetails.forEach(async (item) => {
+            select_booking.forEach(async (item) => {
                 await pool.query(
                     `
                         UPDATE  \`tb_tour-booking-details\`  SET
@@ -257,13 +284,13 @@ BookTour.updateBookTour = async (req, callback) => {
                         WHERE BookTourDetailsId = ?
                     `,
                     [
-                        item.TourId,
-                        item.TourName,
-                        item.Price,
-                        item.Quantity,
-                        item.GuestType,
-                        item.DepartureDate,
-                        item.BookTourDetailsId,
+                        item.tour_id,
+                        item.tour_name,
+                        item.price,
+                        item.quantity,
+                        item.guest_type,
+                        formatDatetime(item.departure_date),
+                        item.booking_detail_id,
                     ],
                 );
             });

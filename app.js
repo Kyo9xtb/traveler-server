@@ -13,7 +13,10 @@ const app = express();
 // view engine setup
 app.use(logger('dev'));
 // app.use(logger('common'));
-const corsOptions = { origin: ['http://localhost:3000', 'http://192.168.1.35:3000'], optionsSuccessStatus: 200 };
+const corsOptions = {
+    origin: ['http://localhost:3000', 'http://localhost:4050'],
+    credentials: true,
+};
 app.use(cors(corsOptions));
 //config req.body
 app.use(express.json());
@@ -21,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-//config templaet engine
+//config template engine
 configViewEngine(app);
 
 // Routes init

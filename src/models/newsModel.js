@@ -1,11 +1,11 @@
 const pool = require('../config/dbConfig');
 const {
-    handelrCreateFolder,
-    handlerCopyFile,
-    handelrDeleteFolder,
-    handlerDeleteFile,
+    handleCreateFolder,
+    handleCopyFile,
+    handleDeleteFolder,
+    handleDeleteFile,
     ChangeToSlug,
-} = require('./handlerModel');
+} = require('./handleModel');
 
 const News = {};
 function DataFormat(data) {
@@ -21,18 +21,19 @@ function DataFormat(data) {
                   listImageUrl.push(fullPathUrl);
               })
             : 'default_thumbnail.png';
+        let createSlug = item.Title + ' ' + item.NewsId;
         let news = {
             news_id: item.NewsId,
             title: item.Title,
-            slug: item.Title ? ChangeToSlug(item.Title) : null,
+            slug: item.Title ? ChangeToSlug(createSlug) : null,
             meta_title: item.Title,
-            gender: item.Gender,
             description: item.Description,
             content: item.Content,
             author: item.Author,
+            status: item.Status,
             image: item.Image ? listImage : 'default_thumbnail.png',
             thumbnail: item.Thumbnail ? `news/${item.NewsId}/${item.Thumbnail}` : 'default_thumbnail.png',
-            create_at: item.CreateAt,
+            created_at: item.CreatedAt,
             update_at: item.UpdateAt,
         };
         news.thumbnail_url = `${process.env.HOSTNAME}/images/${news.thumbnail}`;
@@ -63,44 +64,36 @@ News.getNews = async (slugIn, callback) => {
         callback(false, 'Get news information failed', error);
     }
 };
-// News.getNewsById = async (id, callback) => {
-//     try {
-//         // let [result] = await pool.query(
-//         //     `
-//         //         SELECT * FROM \`tb_news\`
-//         //         WHERE NewsId = ?
-//         //     `,
-//         //     [id],
-//         // );
-//         let [results] = await pool.query(
-//             `
-//                 SELECT * FROM \`tb_news\`
-//             `,
-//         );
-//         // console.log(DataFormat(results));
+News.getNewsById = async (id, callback) => {
+    try {
+        let [result] = await pool.query(
+            `
+                SELECT * FROM \`tb_news\`
+                WHERE NewsId = ?
+            `,
+            [id],
+        );
 
-//         const result = DataFormat(results).find(({ slug }) => slug === id);
-//         console.log(result);
-
-//         if (result) {
-//             callback(true, `Get news id information ${id} successfully`, result);
-//         } else {
-//             callback(false, `Get news id information ${id} does not exist`);
-//         }
-//     } catch (error) {
-//         callback(false, `Get news id information ${id} failed`, error);
-//     }
-// };
+        if (result.length > 0) {
+            callback(true, `Get news id information ${id} successfully`, DataFormat(result)[0]);
+        } else {
+            callback(false, `Get news id information ${id} does not exist`);
+        }
+    } catch (error) {
+        callback(false, `Get news id information ${id} failed`, error);
+    }
+};
 
 News.createNews = async (req, callback) => {
     let { thumbnail, detailed_image } = req.files;
-    let { Title, Description, Content, Author } = req.body;
+    let { Title, Description, Content, Author, Status } = req.body;
     let Thumbnail = thumbnail ? thumbnail[0].filename : null;
     let Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : null;
     Title = Title ? Title.trim() : null;
     Description = Description ? Description.trim() : null;
     Content = Content ? Content.trim() : null;
     Author = Author ? Author.trim() : null;
+    Status = Status ? Status.trim() : null;
     try {
         let [result] = await pool.query(
             `
@@ -111,25 +104,26 @@ News.createNews = async (req, callback) => {
                         Content,
                         Author,
                         Image,
-                        Thumbnail
+                        Thumbnail,
+                        Status
                     ) 
                 VALUES
-                (?,?,?,?,?,?)
+                (?,?,?,?,?,?,?)
             `,
-            [Title, Description, Content, Author, Image, Thumbnail],
+            [Title, Description, Content, Author, Image, Thumbnail, Status],
         );
         const folderName = `./src/public/images/news/${result.insertId}`;
         // Create Folder
-        handelrCreateFolder(folderName);
+        handleCreateFolder(folderName);
         // Copy file
         if (thumbnail) {
-            handlerCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
+            handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
         }
-        if (detailed_image) {
-            detailed_image.forEach((image) => {
-                handlerCopyFile(image.path, `${folderName}/${image.filename}`);
-            });
-        }
+        // if (detailed_image) {
+        //     detailed_image.forEach((image) => {
+        //         handlerCopyFile(image.path, `${folderName}/${image.filename}`);
+        //     });
+        // }
         // Callback
         callback(true, `Create news information successfully`);
     } catch (error) {
@@ -139,14 +133,6 @@ News.createNews = async (req, callback) => {
 
 News.updateNews = async (req, callback) => {
     let { id } = req.params;
-    let { thumbnail, detailed_image } = req.files;
-    let { Title, Description, Content, Author } = req.body;
-    let Thumbnail = thumbnail ? thumbnail[0].filename : null;
-    let Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : null;
-    Title = Title ? Title.trim() : null;
-    Description = Description ? Description.trim() : null;
-    Content = Content ? Content.trim() : null;
-    Author = Author ? Author.trim() : null;
     let [result] = await pool.query(
         `
         SELECT * FROM \`tb_news\`
@@ -154,6 +140,23 @@ News.updateNews = async (req, callback) => {
         `,
         [id],
     );
+    let { thumbnail, detailed_image } = req.files;
+    let { Title, Description, Content, Author, Status } = req.body;
+    let Thumbnail = thumbnail ? thumbnail[0].filename : result[0].Thumbnail;
+    let Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : result[0].Image;
+    Title = Title ? Title.trim() : null;
+    Description = Description ? Description.trim() : null;
+    Content = Content ? Content.trim() : null;
+    Author = Author ? Author.trim() : null;
+    Status = Status ? Status.trim() : null;
+    if (detailed_image && result[0].Image) {
+        result[0].Image.split(',').forEach((image) => {
+            handlerDeleteFile(`./src/public/images/news/${id}/${image}`);
+        });
+    }
+    if (thumbnail && result[0].Thumbnail) {
+        handleDeleteFile(`./src/public/images/news/${id}/${result[0].Thumbnail}`);
+    }
     if (result.length) {
         try {
             if (Thumbnail || Image) {
@@ -164,22 +167,23 @@ News.updateNews = async (req, callback) => {
                         Description = ?,
                         Content = ?,
                         Author = ?,
+                        Status = ?,
                         Image = ?,
                         Thumbnail =?
                     WHERE NewsId = ?
                     `,
-                    [Title, Description, Content, Author, Image, Thumbnail, id],
+                    [Title, Description, Content, Author, Status, Image, Thumbnail, id],
                 );
                 const folderName = `./src/public/images/news/${id}`;
                 // Create Folder
-                handelrCreateFolder(folderName);
+                handleCreateFolder(folderName);
                 // Copy file
                 if (thumbnail) {
-                    handlerCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
+                    handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
                 }
                 if (detailed_image) {
                     detailed_image.forEach((image) => {
-                        handlerCopyFile(image.path, `${folderName}/${image.filename}`);
+                        handleCopyFile(image.path, `${folderName}/${image.filename}`);
                     });
                 }
             } else {
@@ -189,10 +193,11 @@ News.updateNews = async (req, callback) => {
                         Title = ?,
                         Description = ?,
                         Content = ?,
-                        Author = ?
+                        Author = ?,
+                        Status =?
                     WHERE NewsId = ?
                     `,
-                    [Title, Description, Content, Author, id],
+                    [Title, Description, Content, Author, Status, id],
                 );
             }
             callback(true, `Update news information id ${id} successfully`);
@@ -201,11 +206,11 @@ News.updateNews = async (req, callback) => {
         }
     } else {
         if (thumbnail) {
-            handlerDeleteFile(thumbnail[0].path);
+            handleDeleteFile(thumbnail[0].path);
         }
         if (detailed_image) {
             detailed_image.forEach((image) => {
-                handlerCopyFile(image.path);
+                handleCopyFile(image.path);
             });
         }
         callback(false, `Update news information id ${id} does not exist`);
@@ -221,7 +226,7 @@ News.deleteNews = async (id, callback) => {
             `,
             [id],
         );
-        handelrDeleteFolder(`./src/public/images/news/${id}`);
+        handleDeleteFolder(`./src/public/images/news/${id}`);
         callback(true, `Delete news id ${id} successfully`);
     } catch (error) {
         callback(false, `Delete news id ${id} failed`, error);

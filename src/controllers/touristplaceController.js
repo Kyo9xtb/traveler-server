@@ -1,24 +1,14 @@
-const TourPlace = require('../models/touristplaceModel');
+const TourPlace = require('../models/touristPlaceModel');
 
 const handlerGetTourPlace = async (req, res, next) => {
     try {
-        if (req.params.id) {
-            TourPlace.getById(req.params.id, (resStatus, resMessage, resData) => {
-                res.status(200).json({
-                    status: resStatus,
-                    message: resMessage,
-                    data: resData,
-                });
+        TourPlace.getTouristPlace(req.params.id, (resStatus, resMessage, resData) => {
+            res.status(200).json({
+                status: resStatus,
+                message: resMessage,
+                result: resData,
             });
-        } else {
-            TourPlace.getAll((resStatus, resMessage, resData) => {
-                res.status(200).json({
-                    status: resStatus,
-                    message: resMessage,
-                    data: resData,
-                });
-            });
-        }
+        });
     } catch (error) {
         next(error);
     }
@@ -30,7 +20,7 @@ const handlerCreateTourPlace = async (req, res, next) => {
             res.status(200).json({
                 status: resStatus,
                 message: resMessage,
-                data: resData,
+                result: resData,
             });
         });
     } catch (error) {

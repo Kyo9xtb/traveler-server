@@ -4,36 +4,42 @@ const path = require('path');
 const Router = express.Router();
 
 const {
-    handlerGetTour,
-    handlerCreateTour,
-    handlerUpdateTour,
-    handlerDeleteTour,
-} = require('../controllers/tourController');
-
+    handleGetNews,
+    handleCreateNews,
+    handleUpdateNews,
+    handleDeleteNews,
+} = require('../../controllers/newsController');
 const storageProduct = multer.diskStorage({
     destination: (req, file, callBack) => {
-        callBack(null, './src/public/images/tour/');
+        callBack(null, './src/public/images/news');
     },
     filename: (req, file, callBack) => {
         callBack(null, Date.now() + path.extname(file.originalname));
     },
 });
-const uploadProduct = multer({
+const uploadNews = multer({
     storage: storageProduct,
 });
 
-const cpUpload = uploadProduct.fields([
+const newsUpload = uploadNews.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'detailed_image', maxCount: 15 },
 ]);
 
 Router.route('/:id?')
     //[GET]
-    .get(handlerGetTour)
+    .get(handleGetNews)
     //[POST]
-    .post(cpUpload, handlerCreateTour)
+    .post(newsUpload, handleCreateNews)
+    // .post(newsUpload, (req, res) => {
+    //     // console.log(req);
+        
+    //     console.log('Body ===>', req.body);
+
+    //     res.json('Successfully created');
+    // })
     //[PUT]
-    .put(cpUpload, handlerUpdateTour)
+    .put(newsUpload, handleUpdateNews)
     //[DELETE]
-    .delete(handlerDeleteTour);
+    .delete(handleDeleteNews);
 module.exports = Router;

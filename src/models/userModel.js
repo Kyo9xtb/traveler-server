@@ -1,5 +1,11 @@
 const pool = require('../config/dbConfig');
-const { handlerCopyFile, handelrCreateFolder, handlerDeleteFile, handelrDeleteFolder } = require('./handlerModel');
+const {
+    handleCopyFile,
+    handleCreateFolder,
+    handleDeleteFolder,
+    handleDeleteFile,
+    formatDatetime,
+} = require('./handleModel');
 const User = {};
 function UserFormat(data) {
     let results = [];
@@ -14,8 +20,9 @@ function UserFormat(data) {
             email: item.Email,
             user_name: item.UserName,
             card_id: item.CardId,
+            status: item.Status,
             avatar: item.Avatar ? `user_avatar/${item.UserId}/${item.Avatar}` : 'user_avatar/avatar-default.jpg',
-            create_at: item.CreateAt,
+            created_at: item.CreatedAt,
             update_at: item.UpdateAt,
         };
         user.avatar_url = `${process.env.HOSTNAME}/images/${user.avatar}`;
@@ -23,6 +30,7 @@ function UserFormat(data) {
     });
     return results;
 }
+
 User.getUsers = async (callback) => {
     try {
         let [result] = await pool.query(`
@@ -34,6 +42,7 @@ User.getUsers = async (callback) => {
         callback(false, 'Get info users failed', error);
     }
 };
+
 User.getUsersById = async (id, callback) => {
     try {
         let [result] = await pool.query(
@@ -44,7 +53,7 @@ User.getUsersById = async (id, callback) => {
             [id],
         );
         if (result.length) {
-            callback(true, `Get customer ID ${id} information successfully`, UserFormat(result));
+            callback(true, `Get customer ID ${id} information successfully`, UserFormat(result)[0]);
         } else {
             callback(false, `Get customer ID ${id} information does not exist`);
         }
@@ -52,19 +61,40 @@ User.getUsersById = async (id, callback) => {
         callback(false, `Get customer ID ${id} information failed`, error);
     }
 };
-
+User.getUser = async (req, callback) => {
+    try {
+        const { Email, Password } = req.body;
+        const [result] = await pool.query(
+            `
+            SELECT * FROM \`tb_user\`
+            WHERE Email = ? and Password = ?
+        `,
+            [Email, Password],
+        );
+        if (result.length > 0) {
+            return callback(UserFormat(result)[0]);
+        }
+        return callback(null);
+    } catch (error) {
+        callback(error);
+    }
+};
 User.createUser = async (req, callback) => {
     let avatar = req.file;
-    let { FullName, Gender, Birthday, PhoneNumber, Address, Email, UserName, Password, ID_Card } = req.body;
-    FullName = FullName ? FullName.trim() : null;
-    Gender = Gender ? Gender.trim() : null;
-    Birthday = Birthday ? Birthday.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Address = Address ? Address.trim() : null;
-    Email = Email ? Email.trim() : null;
-    UserName = UserName ? UserName.trim() : null;
-    Password = Password ? Password.trim() : null;
-    ID_Card = ID_Card ? ID_Card.trim() : null;
+    let { full_name, gender, birthday, phone_number, address, email, password, user_name, card_id, status } = req.body;
+    full_name = full_name ? full_name.trim() : null;
+    gender = gender ? gender.trim() : null;
+    birthday = birthday ? birthday.trim() : null;
+    phone_number = phone_number ? phone_number.trim() : null;
+    address = address ? address.trim() : null;
+    email = email ? email.trim() : null;
+    password = password ? password.trim() : null;
+    user_name = user_name ? user_name.trim() : null;
+    card_id = card_id ? card_id.trim() : null;
+    status = status ? status.trim() : null;
+    avatar = avatar ? avatar.filename : null;
+    console.log('req.body', req.body);
+
     try {
         let [result] = await pool.query(
             `
@@ -83,18 +113,20 @@ User.createUser = async (req, callback) => {
                     )
                 VALUES (?,?,?,?,?,?,?,?,?,?);
             `,
-            [FullName, Gender, Birthday, PhoneNumber, Address, Email, UserName, Password, ID_Card, avatar.filename],
+            [full_name, gender, birthday, phone_number, address, email, user_name, password, card_id, avatar],
         );
         const folderName = `./src/public/images/user_avatar/${result.insertId}`;
         // Create new folder
-        handelrCreateFolder(folderName);
+        handleCreateFolder(folderName);
         // Copy file
         if (avatar) {
-            handlerCopyFile(avatar.path, `${folderName}/${avatar.filename}`);
+            handleCopyFile(avatar.path, `${folderName}/${avatar.filename}`);
         }
         // Callback
         callback(true, 'Add customer information successfully');
     } catch (error) {
+        console.log(error);
+
         callback(false, `Add failed customer information`, error);
     }
 };
@@ -102,16 +134,7 @@ User.createUser = async (req, callback) => {
 User.updateUser = async (req, callback) => {
     let avatar = req.file;
     let { id } = req.params;
-    let { FullName, Gender, Birthday, PhoneNumber, Address, Email, UserName, Password, ID_Card } = req.body;
-    FullName = FullName ? FullName.trim() : null;
-    Gender = Gender ? Gender.trim() : null;
-    Birthday = Birthday ? Birthday.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Address = Address ? Address.trim() : null;
-    Email = Email ? Email.trim() : null;
-    UserName = UserName ? UserName.trim() : null;
-    Password = Password ? Password.trim() : null;
-    ID_Card = ID_Card ? ID_Card.trim() : null;
+    let { full_name, gender, birthday, phone_number, address, email, user_name, card_id, status } = req.body;
     let [result] = await pool.query(
         `
         SELECT * FROM \`tb_user\`  
@@ -119,6 +142,18 @@ User.updateUser = async (req, callback) => {
     `,
         [id],
     );
+    full_name = full_name ? full_name.trim() : null;
+    gender = gender ? gender.trim() : null;
+    birthday = birthday ? birthday.trim() : null;
+    phone_number = phone_number ? phone_number.trim() : null;
+    address = address ? address.trim() : null;
+    email = email ? email.trim() : null;
+    user_name = user_name ? user_name.trim() : null;
+    card_id = card_id ? card_id.trim() : null;
+    status = status ? status.trim() : null;
+    avatar = avatar ? avatar.filename : result[0].Avatar;
+    console.log('req.body', req.body);
+
     if (result.length) {
         try {
             if (avatar) {
@@ -139,33 +174,21 @@ User.updateUser = async (req, callback) => {
                         Address = ?,
                         Email = ?,
                         UserName = ?,
-                        Password = ?,
                         CardId = ?,
+                        Status = ?,
                         Avatar = ? 
                     WHERE UserId = ?;
                 `,
-                    [
-                        FullName,
-                        Gender,
-                        Birthday,
-                        PhoneNumber,
-                        Address,
-                        Email,
-                        UserName,
-                        Password,
-                        ID_Card,
-                        avatar.filename,
-                        id,
-                    ],
+                    [full_name, gender, birthday, phone_number, address, email, user_name, card_id, status, avatar, id],
                 );
                 const folderName = `./src/public/images/user_avatar/${id}`;
                 // create new folder for new avatar
-                handelrCreateFolder(folderName);
+                handleCreateFolder(folderName);
                 // copy file
-                handlerCopyFile(avatar.path, `${folderName}/${avatar.filename}`);
+                handleCopyFile(avatar.path, `${folderName}/${avatar.filename}`);
                 // delete old file
                 if (result[0].Avatar) {
-                    handlerDeleteFile(`${folderName}/${result[0].Avatar}`);
+                    handleDeleteFile(`${folderName}/${result[0].Avatar}`);
                 }
             } else {
                 await pool.query(
@@ -178,11 +201,11 @@ User.updateUser = async (req, callback) => {
                         Address = ?,
                         Email = ?,
                         UserName = ?,
-                        Password = ?,
-                        CardId = ? 
+                        CardId = ? ,
+                        Status = ?
                     WHERE UserId = ?;
                 `,
-                    [FullName, Gender, Birthday, PhoneNumber, Address, Email, UserName, Password, ID_Card, id],
+                    [full_name, gender, birthday, phone_number, address, email, user_name, card_id, status, id],
                 );
             }
             callback(true, `Update customer information ID ${id} successful`);
@@ -192,7 +215,7 @@ User.updateUser = async (req, callback) => {
         }
     } else {
         if (avatar) {
-            handlerDeleteFile(avatar.path);
+            handleDeleteFile(avatar.path);
         }
         callback(false, `Customer information ID ${id} does not exist`);
     }
@@ -208,11 +231,96 @@ User.deleteUser = async (id, callback) => {
             [id],
         );
         // Delete folder
-        handelrDeleteFolder(`./src/public/images/user_avatar/${id}`);
+        handleDeleteFolder(`./src/public/images/user_avatar/${id}`);
         // Callback
         callback(true, `Delete customer information ID ${id} successful`);
     } catch (error) {
         callback(false, `Delete customer information ID ${id} failed`, error);
     }
 };
+
+User.getCheckEmail = async (email, callback) => {
+    try {
+        let [result] = await pool.query(
+            `
+            SELECT *  FROM \`tb_user\`
+            WHERE Email = ?    
+        `,
+            [email],
+        );
+        if (result.length > 0) {
+            return callback(true);
+        } else {
+            return callback(false);
+        }
+    } catch (error) {
+        callback(false, 'Get info users failed', error);
+    }
+};
+
+User.getSession = async (SessionId, callback) => {
+    try {
+        const [result] = await pool.query(
+            `
+            SELECT * FROM \`tb_session-user\`
+            WHERE SessionId = ?
+        `,
+            [SessionId],
+        );
+        console.log('sessionID', SessionId);
+        console.log("result", result);
+        
+        if (result.length > 0) {
+            return callback(result[0]);
+        }
+        return callback(null);
+    } catch (error) {
+        console.log(error);
+        
+        callback(error);
+    }
+};
+
+User.createSession = async (data, callback) => {
+    try {
+        const { sessionID, userId, createAt, expiresAt } = data;
+        const [result] = await pool.query(
+            `
+            INSERT INTO \`tb_session-user\` 
+                (
+                    SessionId, 
+                    UserId, 
+                    CreatedAt,
+                    ExpiresAt
+                ) 
+            VALUES (?,?,?,?) 
+        `,
+            [sessionID, userId, formatDatetime(createAt), formatDatetime(expiresAt)],
+        );
+        if (result.affectedRows) {
+            return callback(true);
+        }
+        return callback(false);
+    } catch (error) {
+        console.log(error);
+        
+        callback(error);
+    }
+};
+
+User.deleteSession = async (sessionID) => {
+    try {
+        await pool.query(
+            `
+            DELETE FROM \`tb_session-user\`
+            WHERE SessionId = ?
+            `,
+            [sessionID],
+        );
+        // console.log(sessionID);
+    } catch (error) {
+        callback(error);
+    }
+};
+
 module.exports = User;

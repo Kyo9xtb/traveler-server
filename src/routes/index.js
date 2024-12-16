@@ -1,5 +1,5 @@
 const webRoute = require('./web');
-const apiRoute = require('./api');
+const apiRoute = require('./Api');
 const path = require('path');
 function route(app) {
     app.use('/api/v1', apiRoute);

@@ -1,6 +1,6 @@
 const Contact = require('../models/ContactModel');
 
-const handlerGetContact = async (req, res, next) => {
+const handleGetContact = async (req, res, next) => {
     try {
         if (req.params.id) {
             Contact.getContactById(req.params.id, (resStatus, resMessage, resData) => {
@@ -16,7 +16,7 @@ const handlerGetContact = async (req, res, next) => {
     }
 };
 
-const handlerCreateContact = async (req, res, next) => {
+const handleCreateContact = async (req, res, next) => {
     try {
         Contact.createContact(req, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -26,7 +26,7 @@ const handlerCreateContact = async (req, res, next) => {
     }
 };
 
-const handlerUpdateContact = async (req, res, next) => {
+const handleUpdateContact = async (req, res, next) => {
     try {
         Contact.updateContact(req, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -35,7 +35,7 @@ const handlerUpdateContact = async (req, res, next) => {
         next(error);
     }
 };
-const handlerDeleteContact = async (req, res, next) => {
+const handleDeleteContact = async (req, res, next) => {
     try {
         Contact.deleteContact(req.params.id, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -45,8 +45,8 @@ const handlerDeleteContact = async (req, res, next) => {
     }
 };
 module.exports = {
-    handlerGetContact,
-    handlerCreateContact,
-    handlerUpdateContact,
-    handlerDeleteContact,
+    handleGetContact,
+    handleCreateContact,
+    handleUpdateContact,
+    handleDeleteContact,
 };

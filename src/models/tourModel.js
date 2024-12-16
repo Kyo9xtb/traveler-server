@@ -1,17 +1,18 @@
 const pool = require('../config/dbConfig');
 const {
-    handelrCreateFolder,
-    handlerCopyFile,
-    handlerDeleteFile,
-    handelrDeleteFolder,
+    handleCreateFolder,
+    handleCopyFile,
+    handleDeleteFile,
+    handleDeleteFolder,
     ChangeToSlug,
-} = require('./handlerModel');
+} = require('./handleModel');
 const Tour = {};
 function DataFormat(data) {
     let results = [];
     data.forEach((item) => {
         let listImage = [];
         let listImageUrl = [];
+
         item.Image
             ? item.Image.split(',').forEach((image) => {
                   const fullPath = `tour/${item.TourId}/${image}`;
@@ -20,28 +21,30 @@ function DataFormat(data) {
                   listImageUrl.push(fullPathUrl);
               })
             : 'default_thumbnail.png';
+
+        let createSlug = item.TourName + ' ' + item.TourId;
         let tour = {
             tour_id: item.TourId,
             tour_name: item.TourName,
-            slug: item.TourName ? ChangeToSlug(item.TourName) : null,
+            slug: createSlug && ChangeToSlug(createSlug),
             tour_group: item.TourGroup,
-            description:item.Description,
+            tour_summary: item.TourSummary,
             area: item.Area,
             price: item.Price,
             sale: item.Sale,
             promotion_price: item.Price && item.Sale ? item.Price * (1 - item.Sale / 100) : item.Price,
             departure_schedule: item.DepartureSchedule,
-            vehicle: item.Vehicle,
+            vehicle: item.Vehicle ? item.Vehicle.split(',') : item.Vehicle,
             time: item.Time,
             describe: item.Describe,
-            tour_progarm: item.TourProgram,
+            tour_program: item.TourProgram,
             tour_policy: item.TourPolicy,
             terms_conditions: item.TermsConditions,
             trip: item.Trip,
-            guest_type: item.GuestType,
+            guest_type: item.GuestType ? JSON.parse(`[${item.GuestType}]`) : item.GuestType,
             image: item.Image ? listImage : 'default_thumbnail.png',
             thumbnail: item.Thumbnail ? `tour/${item.TourId}/${item.Thumbnail}` : 'default_thumbnail.png',
-            create_at: item.CreateAt,
+            created_at: item.CreatedAt,
             update_at: item.UpdateAt,
         };
         tour.thumbnail_url = `${process.env.HOSTNAME}/images/${tour.thumbnail}`;
@@ -102,7 +105,7 @@ Tour.createTour = async (req, callback) => {
         DepartureSchedule,
         Vehicle,
         Time,
-        Description,
+        TourSummary,
         TourProgram,
         TourPolicy,
         TermsConditions,
@@ -119,12 +122,12 @@ Tour.createTour = async (req, callback) => {
     DepartureSchedule = DepartureSchedule ? DepartureSchedule.trim() : null;
     Vehicle = Vehicle ? Vehicle.trim() : null;
     Time = Time ? Time.trim() : null;
-    Description = Description ? Description.trim() : null;
+    TourSummary = TourSummary ? TourSummary.trim() : null;
     TourProgram = TourProgram ? TourProgram.trim() : null;
     TourPolicy = TourPolicy ? TourPolicy.trim() : null;
     TermsConditions = TermsConditions ? TermsConditions.trim() : null;
     Trip = Trip ? Trip.trim() : null;
-    GuestType = GuestType ? GuestType.trim() : null;
+    GuestType = GuestType ? GuestType.toString() : null;
     try {
         let [result] = await pool.query(
             `
@@ -137,7 +140,7 @@ Tour.createTour = async (req, callback) => {
                 DepartureSchedule,
                 Vehicle,
                 Time,
-                Description,
+                TourSummary,
                 TourProgram,
                 TourPolicy,
                 TermsConditions,
@@ -157,7 +160,7 @@ Tour.createTour = async (req, callback) => {
                 DepartureSchedule,
                 Vehicle,
                 Time,
-                Description,
+                TourSummary,
                 TourProgram,
                 TourPolicy,
                 TermsConditions,
@@ -169,14 +172,14 @@ Tour.createTour = async (req, callback) => {
         );
         const folderName = `./src/public/images/tour/${result.insertId}`;
         // Create Folder
-        handelrCreateFolder(folderName);
+        handleCreateFolder(folderName);
         // Copy file
         if (thumbnail) {
-            handlerCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
+            handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
         }
         if (detailed_image) {
             detailed_image.forEach((image) => {
-                handlerCopyFile(image.path, `${folderName}/${image.filename}`);
+                handleCopyFile(image.path, `${folderName}/${image.filename}`);
             });
         }
         // Callback
@@ -189,6 +192,13 @@ Tour.createTour = async (req, callback) => {
 Tour.updateTour = async (req, callback) => {
     let { thumbnail, detailed_image } = req.files;
     let { id } = req.params;
+    let [result] = await pool.query(
+        `
+        SELECT * FROM \`tb_tour\`
+        WHERE TourId =?
+        `,
+        [id],
+    );
     let {
         TourName,
         TourGroup,
@@ -198,15 +208,15 @@ Tour.updateTour = async (req, callback) => {
         DepartureSchedule,
         Vehicle,
         Time,
-        Description,
+        TourSummary,
         TourProgram,
         TourPolicy,
         TermsConditions,
         Trip,
         GuestType,
     } = req.body;
-    let Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : null;
-    let Thumbnail = thumbnail ? thumbnail[0].filename : null;
+    let Image = detailed_image ? detailed_image.map((image) => image.filename).join(',') : result[0].Image;
+    let Thumbnail = thumbnail ? thumbnail[0].filename : result[0].Thumbnail;
     TourName = TourName ? TourName.trim() : null;
     TourGroup = TourGroup ? TourGroup.trim() : null;
     Area = Area ? Area.trim() : null;
@@ -215,19 +225,20 @@ Tour.updateTour = async (req, callback) => {
     DepartureSchedule = DepartureSchedule ? DepartureSchedule.trim() : null;
     Vehicle = Vehicle ? Vehicle.trim() : null;
     Time = Time ? Time.trim() : null;
-    Description = Description ? Description.trim() : null;
+    TourSummary = TourSummary ? TourSummary.trim() : null;
     TourProgram = TourProgram ? TourProgram.trim() : null;
     TourPolicy = TourPolicy ? TourPolicy.trim() : null;
     TermsConditions = TermsConditions ? TermsConditions.trim() : null;
     Trip = Trip ? Trip.trim() : null;
-    GuestType = GuestType ? GuestType.trim() : null;
-    let [result] = await pool.query(
-        `
-        SELECT * FROM \`tb_tour\`
-        WHERE TourId =?
-        `,
-        [id],
-    );
+    GuestType = GuestType ? GuestType.toString() : null;
+    if (detailed_image && result[0].Image) {
+        result[0].Image.split(',').forEach((image) => {
+            handleDeleteFile(`./src/public/images/tour/${id}/${image}`);
+        });
+    }
+    if (thumbnail && result[0].Thumbnail) {
+        handleDeleteFile(`./src/public/images/tour/${id}/${result[0].Thumbnail}`);
+    }
     if (result.length) {
         try {
             if (Thumbnail || Image) {
@@ -242,7 +253,7 @@ Tour.updateTour = async (req, callback) => {
                     DepartureSchedule = ?,
                     Vehicle = ?,
                     Time = ?,
-                    Description = ?,
+                    TourSummary = ?,
                     TourProgram = ?,
                     TourPolicy = ?,
                     TermsConditions = ?,
@@ -261,7 +272,7 @@ Tour.updateTour = async (req, callback) => {
                         DepartureSchedule,
                         Vehicle,
                         Time,
-                        Description,
+                        TourSummary,
                         TourProgram,
                         TourPolicy,
                         TermsConditions,
@@ -273,13 +284,13 @@ Tour.updateTour = async (req, callback) => {
                     ],
                 );
                 const folderName = `./src/public/images/tour/${id}`;
-                handelrCreateFolder(folderName);
-                if (Thumbnail) {
-                    handlerCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
+                handleCreateFolder(folderName);
+                if (thumbnail) {
+                    handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
                 }
                 if (detailed_image) {
                     detailed_image.forEach((image) => {
-                        handlerCopyFile(image.path, `${folderName}/${image.filename}`);
+                        handleCopyFile(image.path, `${folderName}/${image.filename}`);
                     });
                 }
             } else {
@@ -294,7 +305,7 @@ Tour.updateTour = async (req, callback) => {
                     DepartureSchedule = ?,
                     Vehicle = ?,
                     Time = ?,
-                    Description = ?,
+                    TourSummary = ?,
                     TourProgram = ?,
                     TourPolicy = ?,
                     TermsConditions = ?,
@@ -311,7 +322,7 @@ Tour.updateTour = async (req, callback) => {
                         DepartureSchedule,
                         Vehicle,
                         Time,
-                        Description,
+                        TourSummary,
                         TourProgram,
                         TourPolicy,
                         TermsConditions,
@@ -323,15 +334,17 @@ Tour.updateTour = async (req, callback) => {
             }
             callback(true, `Update tour information ID ${id} successfully`);
         } catch (error) {
-            callback(true, `Update news information id ${id} failed`, error);
+            console.log(error);
+
+            callback(false, `Update news information id ${id} failed`, error);
         }
     } else {
         if (thumbnail) {
-            handlerDeleteFile(thumbnail[0].path);
+            handleDeleteFile(thumbnail[0].path);
         }
         if (detailed_image) {
             detailed_image.forEach((image) => {
-                handlerDeleteFile(image.path);
+                handleDeleteFile(image.path);
             });
         }
         callback(false, `Tour information ID ${id} does not exist`);
@@ -348,7 +361,7 @@ Tour.deleteTour = async (id, callback) => {
             [id],
         );
         // Delete folder
-        handelrDeleteFolder(`./src/public/images/tour/${id}`);
+        handleDeleteFolder(`./src/public/images/tour/${id}`);
         // Callback
         callback(true, `Delete tour information id ${id} successfully`);
     } catch (error) {

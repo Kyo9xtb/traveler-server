@@ -2,7 +2,7 @@ const Tour = require('../models/tourModel');
 
 const handlerGetTour = (req, res, next) => {
     try {
-        console.log(req.query);
+        // console.log(req);
         Tour.getTour(req.params.id, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
         });

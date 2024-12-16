@@ -1,16 +1,22 @@
 const News = require('../models/newsModel');
 
-const handlerGetNews = async (req, res, next) => {
+const handleGetNews = async (req, res, next) => {
     try {
-        News.getNews(req.params.id, (resStatus, resMessage, resData) => {
-            res.status(200).json({ status: resStatus, message: resMessage, result: resData });
-        });
+        if (!isNaN(Number(req.params.id))) {
+            News.getNewsById(req.params.id, (resStatus, resMessage, resData) => {
+                res.status(200).json({ status: resStatus, message: resMessage, result: resData });
+            });
+        } else {
+            News.getNews(req.params.id, (resStatus, resMessage, resData) => {
+                res.status(200).json({ status: resStatus, message: resMessage, result: resData });
+            });
+        }
     } catch (error) {
         next(error);
     }
 };
 
-const handlerCreateNews = async (req, res, next) => {
+const handleCreateNews = async (req, res, next) => {
     try {
         News.createNews(req, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -20,7 +26,7 @@ const handlerCreateNews = async (req, res, next) => {
     }
 };
 
-const handlerUpdateNews = async (req, res, next) => {
+const handleUpdateNews = async (req, res, next) => {
     try {
         News.updateNews(req, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -30,7 +36,7 @@ const handlerUpdateNews = async (req, res, next) => {
     }
 };
 
-const handlerDeleteNews = async (req, res, next) => {
+const handleDeleteNews = async (req, res, next) => {
     try {
         News.deleteNews(req.params.id, (resStatus, resMessage, resData) => {
             res.status(200).json({ status: resStatus, message: resMessage, result: resData });
@@ -41,8 +47,8 @@ const handlerDeleteNews = async (req, res, next) => {
 };
 
 module.exports = {
-    handlerGetNews,
-    handlerCreateNews,
-    handlerUpdateNews,
-    handlerDeleteNews,
+    handleGetNews,
+    handleCreateNews,
+    handleUpdateNews,
+    handleDeleteNews,
 };

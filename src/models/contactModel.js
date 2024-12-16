@@ -11,8 +11,9 @@ function DataFormat(data) {
             phone_number: item.PhoneNumber,
             email: item.Email,
             content: item.Content,
+            contact_results: item.ContactResults,
             status: item.Status,
-            create_at: item.CreateAt,
+            created_at: item.CreatedAt,
             update_at: item.UpdateAt,
         };
         results.push(contact);
@@ -22,7 +23,7 @@ function DataFormat(data) {
 Contact.getContacts = async (callback) => {
     try {
         let [result] = await pool.query(`
-            select * from tb_contact
+            SELECT * FROM \`tb_contact\`
         `);
 
         callback(true, 'Get info contact successfully', DataFormat(result));
@@ -34,30 +35,30 @@ Contact.getContactById = async (id, callback) => {
     try {
         let [result] = await pool.query(
             `
-            select * from tb_contact   
-            where ContactId = ?
+            SELECT * FROM \`tb_contact\`   
+            WHERE ContactId = ?
         `,
             [id],
         );
-        callback(true, `Get contact ID ${id} information successfully`, DataFormat(result));
+        callback(true, `Get contact ID ${id} information successfully`, DataFormat(result)[0]);
     } catch (error) {
         callback(false, `Get contact ID  ${id} information failed`, error);
     }
 };
 
 Contact.createContact = async (req, callback) => {
-    let { FullName, PhoneNumber, Email, Content } = req.body;
-    FullName = FullName ? FullName.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Email = Email ? Email.trim() : null;
-    Content = Content ? Content.trim() : null;
+    let { full_name, phone_number, email, content } = req.body;
+    full_name = full_name ? full_name.trim() : null;
+    phone_number = phone_number ? phone_number.trim() : null;
+    email = email ? email.trim() : null;
+    content = content ? content.trim() : null;
     try {
         await pool.query(
             `
-            insert into tb_contact (FullName, PhoneNumber, Email, Content)  
-            values (?,?,?,?)
+            INSERT INTO \`tb_contact\` (FullName, PhoneNumber, Email, Content)  
+            VALUES (?,?,?,?)
         `,
-            [FullName, PhoneNumber, Email, Content],
+            [full_name, phone_number, email, content],
         );
         callback(true, 'Create successful contact');
     } catch (error) {
@@ -67,21 +68,32 @@ Contact.createContact = async (req, callback) => {
 
 Contact.updateContact = async (req, callback) => {
     let ID_Contact = req.params.id;
-    let { FullName, PhoneNumber, Email, Content } = req.body;
-    FullName = FullName ? FullName.trim() : null;
-    PhoneNumber = PhoneNumber ? PhoneNumber.trim() : null;
-    Email = Email ? Email.trim() : null;
-    Content = Content ? Content.trim() : null;
+    let { full_name, phone_number, email, content, contact_results, status } = req.body;
+    full_name = full_name ? full_name.toString().trim() : null;
+    phone_number = phone_number ? phone_number.toString().trim() : null;
+    email = email ? email.trim() : null;
+    content = content ? content.trim() : null;
+    contact_results = contact_results ? contact_results.trim() : null;
+    status = status ? status.trim() : null;
+
     try {
         let [result] = await pool.query(
             `
-            update tb_contact set  FullName = ?, PhoneNumber = ? ,  Email = ? ,  Content  = ?
-            where ID_Contact = ?
+            UPDATE \`tb_contact\` SET  
+                FullName = ?, 
+                PhoneNumber = ?,
+                Email = ?,  
+                Content = ?, 
+                ContactResults = ?,
+                Status = ?
+            WHERE ContactId = ?
         `,
-            [FullName, PhoneNumber, Email, Content, ID_Contact],
+            [full_name, phone_number, email, content, contact_results, status, ID_Contact],
         );
         callback(true, `Update contact information id ${ID_Contact} successfully`);
     } catch (error) {
+        console.log(error);
+
         callback(false, `Update contact information id ${ID_Contact} failed`, error);
     }
 };
@@ -90,8 +102,8 @@ Contact.deleteContact = async (id, callback) => {
     try {
         await pool.query(
             `
-            delete from tb_contact
-            where ID_Contact = ?
+            DELETE FROM \`tb_contact\`
+            WHERE ContactId = ?
         `,
             [id],
         );

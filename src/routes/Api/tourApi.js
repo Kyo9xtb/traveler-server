@@ -4,15 +4,15 @@ const path = require('path');
 const Router = express.Router();
 
 const {
-    handlerGetTourPlace,
-    handlerCreateTourPlace,
-    handlerUpdateTourPlace,
-    handlerDeleteTourPlace,
-} = require('../controllers/touristPlaceController');
+    handlerGetTour,
+    handlerCreateTour,
+    handlerUpdateTour,
+    handlerDeleteTour,
+} = require('../../controllers/tourController');
 
 const storageProduct = multer.diskStorage({
     destination: (req, file, callBack) => {
-        callBack(null, './src/public/images/tourist_place/');
+        callBack(null, './src/public/images/tour/');
     },
     filename: (req, file, callBack) => {
         callBack(null, Date.now() + path.extname(file.originalname));
@@ -28,12 +28,19 @@ const cpUpload = uploadProduct.fields([
 ]);
 
 Router.route('/:id?')
+    // [api/v1/tour]
     //[GET]
-    .get(handlerGetTourPlace)
+    .get(handlerGetTour)
     //[POST]
-    .post(cpUpload, handlerCreateTourPlace)
+    .post(cpUpload, handlerCreateTour)
     //[PUT]
-    .put(cpUpload, handlerUpdateTourPlace)
+    .put(cpUpload, handlerUpdateTour)
+    // .put(cpUpload, (req, res) => {
+    //     const { thumbnail } = req.files;
+    //     console.log('body ===>', req.body);
+    //     console.log('Files ===>', req.files);
+    //     res.json('success');
+    // })
     //[DELETE]
-    .delete(handlerDeleteTourPlace);
+    .delete(handlerDeleteTour);
 module.exports = Router;

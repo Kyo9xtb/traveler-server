@@ -1,25 +1,27 @@
 const fs = require('fs');
 
-const handlerCopyFile = (source, destination) => {
-    fs.copyFile(source, destination, (err) => {
-        if (err) {
-            console.log('Error Found:', err);
-        } else {
-            handlerDeleteFile(source);
-        }
-    });
+const handleCopyFile = (source, destination) => {
+    if (fs.existsSync(source)) {
+        fs.copyFile(source, destination, (err) => {
+            if (err) {
+                console.log('Error Found:', err);
+            } else {
+                handleDeleteFile(source);
+            }
+        });
+    }
 };
-const handlerDeleteFile = (source) => {
+const handleDeleteFile = (source) => {
     if (fs.existsSync(source)) {
         fs.unlinkSync(source);
     }
 };
-const handelrCreateFolder = (folderName) => {
+const handleCreateFolder = (folderName) => {
     if (!fs.existsSync(folderName)) {
         fs.mkdirSync(folderName, { recursive: true });
     }
 };
-const handelrDeleteFolder = (folderName) => {
+const handleDeleteFolder = (folderName) => {
     if (fs.existsSync(folderName)) {
         fs.rmSync(folderName, { recursive: true, force: true });
     }
@@ -45,4 +47,8 @@ const ChangeToSlug = (path) => {
         .replace(/^-+|-+$/g, '');
     return slug;
 };
-module.exports = { handlerCopyFile, handlerDeleteFile, handelrCreateFolder, handelrDeleteFolder, ChangeToSlug };
+function formatDatetime(date) {
+    let dateOut = new Date(date);
+    return dateOut.toISOString().slice(0, 19).replace('T', ' ');
+}
+module.exports = { handleCopyFile, handleDeleteFile, handleCreateFolder, handleDeleteFolder, ChangeToSlug, formatDatetime };
