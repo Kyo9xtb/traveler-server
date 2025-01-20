@@ -8,7 +8,7 @@ const {
     handleCreateBookTour,
     handleUpdateBookTour,
     handleDeleteBookTour,
-} = require('../../controllers/booktourController');
+} = require('../../controllers/bookTourController');
 
 Router.route('/:id?')
     //[GET]

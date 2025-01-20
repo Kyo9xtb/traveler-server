@@ -51,4 +51,12 @@ function formatDatetime(date) {
     let dateOut = new Date(date);
     return dateOut.toISOString().slice(0, 19).replace('T', ' ');
 }
-module.exports = { handleCopyFile, handleDeleteFile, handleCreateFolder, handleDeleteFolder, ChangeToSlug, formatDatetime };
+
+module.exports = {
+    handleCopyFile,
+    handleDeleteFile,
+    handleCreateFolder,
+    handleDeleteFolder,
+    ChangeToSlug,
+    formatDatetime,
+};

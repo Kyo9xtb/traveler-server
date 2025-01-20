@@ -11,6 +11,7 @@
 # production
 /build
 /.vscode
+/src/public/images
 /src/public/images/news
 /src/public/images/tour
 /src/public/images/tourist_place

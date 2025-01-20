@@ -28,19 +28,13 @@ const cpUpload = uploadProduct.fields([
 ]);
 
 Router.route('/:id?')
-    // [api/v1/tour]
+    // [/api/v1/tour]
     //[GET]
     .get(handlerGetTour)
     //[POST]
     .post(cpUpload, handlerCreateTour)
     //[PUT]
     .put(cpUpload, handlerUpdateTour)
-    // .put(cpUpload, (req, res) => {
-    //     const { thumbnail } = req.files;
-    //     console.log('body ===>', req.body);
-    //     console.log('Files ===>', req.files);
-    //     res.json('success');
-    // })
     //[DELETE]
     .delete(handlerDeleteTour);
 module.exports = Router;

@@ -31,13 +31,6 @@ Router.route('/:id?')
     .get(handleGetNews)
     //[POST]
     .post(newsUpload, handleCreateNews)
-    // .post(newsUpload, (req, res) => {
-    //     // console.log(req);
-        
-    //     console.log('Body ===>', req.body);
-
-    //     res.json('Successfully created');
-    // })
     //[PUT]
     .put(newsUpload, handleUpdateNews)
     //[DELETE]

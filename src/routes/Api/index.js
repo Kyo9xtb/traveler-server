@@ -9,7 +9,9 @@ const touristsApi = require('./touristPlaceApi');
 const tourApi = require('./tourApi');
 const bookTourApi = require('./bookTourApi');
 const imagesApi = require('./imagesApi');
-const authorsApi = require('./authorApi');
+const authorsApi = require('./adminApi');
+const cartApi = require('./cartApi');
+const statisticalReportApi = require('./statisticalReportApi');
 
 Router.use('/book-tour', bookTourApi);
 Router.use('/tour', tourApi);
@@ -19,6 +21,8 @@ Router.use('/user', userApi);
 Router.use('/contact', contactApi);
 Router.use('/post-images', imagesApi);
 Router.use('/author', authorsApi);
+Router.use('/cart', cartApi);
+Router.use('/statistical-report', statisticalReportApi);
 Router.use('/', productApi);
 
 module.exports = Router;

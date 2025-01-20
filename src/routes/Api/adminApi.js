@@ -4,15 +4,15 @@ const path = require('path');
 const Router = express.Router();
 
 const {
-    handleGetUser,
-    handleCreateUser,
-    handleUpdateUser,
-    handleDeleteUser,
     handleLogin,
-    handleCheckLogin,
     handleLogout,
+    handleCheckLogin,
+    handleGetAdmin,
+    handleCreateAdmin,
+    handleUpdateAdmin,
+    handleDeleteAdmin,
     handleCheckEmail,
-} = require('../../controllers/userController');
+} = require('../../controllers/adminController');
 
 const storageProduct = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -27,13 +27,7 @@ const upload = multer({
     storage: storageProduct,
 });
 
-// const cpUpload = upload.fields([
-//     { name: 'avatar', maxCount: 1 },
-// ]);
 const cpUpload = upload.single('avatar');
-Router.route('/email')
-    //[POST]
-    .post(handleCheckEmail);
 Router.route('/login')
     //[POST]
     .post(handleLogin);
@@ -45,15 +39,16 @@ Router.route('/logout')
 Router.route('/me')
     //[GET]
     .get(handleCheckLogin);
-
-Router.route('/:id?')
-    //[GET]
-    .get(handleGetUser)
+Router.route('/account/email')
     //[POST]
-    .post(cpUpload, handleCreateUser)
-    //[PUT]
-    .put(cpUpload, handleUpdateUser)
-    //[DELETE]
-    .delete(handleDeleteUser);
-
+    .post(handleCheckEmail);
+Router.route('/account/:id?')
+    //[GET]
+    .get(handleGetAdmin)
+    //[POST]
+    .post(cpUpload, handleCreateAdmin)
+    // //[PUT]
+    .put(cpUpload, handleUpdateAdmin)
+    // //[DELETE]
+    .delete(handleDeleteAdmin);
 module.exports = Router;

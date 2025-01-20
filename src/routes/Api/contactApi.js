@@ -17,11 +17,6 @@ Router.route('/:id?')
     //[POST]
     .post(upload.none(), handleCreateContact)
     //[PUT]
-    // .put(upload.none(), (req,res) =>{
-    //     console.log(req.body);
-    //     res.json('success')
-        
-    // })
     .put(upload.none(), handleUpdateContact)
     //[DELETE]
     .delete(handleDeleteContact);

@@ -22,27 +22,44 @@ function DataFormat(data) {
 }
 Contact.getContacts = async (callback) => {
     try {
-        let [result] = await pool.query(`
+        const [result] = await pool.query(`
             SELECT * FROM \`tb_contact\`
         `);
-
-        callback(true, 'Get info contact successfully', DataFormat(result));
+        if (result.length > 0) {
+            return callback(true, 'Get info contact successfully', DataFormat(result));
+        } else {
+            return callback(true, 'No contact information found');
+        }
     } catch (error) {
-        callback(false, 'Get info contact failed', error);
+        console.error('Error getting contact in contact model:', error);
+        return callback(
+            false,
+            'Get info contact failed. A server-side problem occurred. Please come back later.',
+            error,
+        );
     }
 };
 Contact.getContactById = async (id, callback) => {
     try {
-        let [result] = await pool.query(
+        const [result] = await pool.query(
             `
-            SELECT * FROM \`tb_contact\`   
+            SELECT * FROM \`tb_contact\`
             WHERE ContactId = ?
         `,
             [id],
         );
-        callback(true, `Get contact ID ${id} information successfully`, DataFormat(result)[0]);
+        if (result.length > 0) {
+            return callback(true, `Get contact ID ${id} information successfully`, DataFormat(result)[0]);
+        } else {
+            return callback(false, `Get contact ID ${id} information does not exist`);
+        }
     } catch (error) {
-        callback(false, `Get contact ID  ${id} information failed`, error);
+        console.error('Error getting contact by id in contact model:', error);
+        return callback(
+            false,
+            `Get contact ID  ${id} information failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 
@@ -53,31 +70,41 @@ Contact.createContact = async (req, callback) => {
     email = email ? email.trim() : null;
     content = content ? content.trim() : null;
     try {
-        await pool.query(
+        const [result] = await pool.query(
             `
             INSERT INTO \`tb_contact\` (FullName, PhoneNumber, Email, Content)  
             VALUES (?,?,?,?)
         `,
             [full_name, phone_number, email, content],
         );
-        callback(true, 'Create successful contact');
+        if (result.affectedRows > 0) {
+            return callback(true, 'Create successful contact');
+        } else {
+            return callback(false, 'Create contact failed');
+        }
     } catch (error) {
-        callback(false, 'Create failed contact'.error);
+        console.error('Error creating contact in contact model:', error);
+        return callback(false, 'Create failed contact. A server-side problem occurred. Please come back later.', error);
     }
 };
 
 Contact.updateContact = async (req, callback) => {
-    let ID_Contact = req.params.id;
-    let { full_name, phone_number, email, content, contact_results, status } = req.body;
-    full_name = full_name ? full_name.toString().trim() : null;
-    phone_number = phone_number ? phone_number.toString().trim() : null;
-    email = email ? email.trim() : null;
-    content = content ? content.trim() : null;
-    contact_results = contact_results ? contact_results.trim() : null;
-    status = status ? status.trim() : null;
-
+    const { id } = req.params;
     try {
-        let [result] = await pool.query(
+        const [result] = await pool.query('SELECT * FROM `tb_contact` WHERE ContactId = ?', [id]);
+
+        if (result.length === 0) {
+            return callback(false, `Update contact id ${id} failed. Contact does not exist.`);
+        }
+        let { FullName, PhoneNumber, Email, Content, ContactResults, Status } = result[0];
+        let { full_name, phone_number, email, content, contact_results, status } = req.body;
+        full_name = full_name ? full_name.toString().trim() : FullName;
+        phone_number = phone_number ? phone_number.toString().trim() : PhoneNumber;
+        email = email ? email.trim() : Email;
+        content = content ? content.trim() : Content;
+        contact_results = contact_results ? contact_results.trim() : ContactResults;
+        status = status ? status.trim() : Status;
+        const [resultUpdate] = await pool.query(
             `
             UPDATE \`tb_contact\` SET  
                 FullName = ?, 
@@ -88,28 +115,44 @@ Contact.updateContact = async (req, callback) => {
                 Status = ?
             WHERE ContactId = ?
         `,
-            [full_name, phone_number, email, content, contact_results, status, ID_Contact],
+            [full_name, phone_number, email, content, contact_results, status, id],
         );
-        callback(true, `Update contact information id ${ID_Contact} successfully`);
+        if (resultUpdate.affectedRows > 0) {
+            return callback(true, `Update contact information id ${id} successfully`);
+        } else {
+            return callback(true, `Update contact information id ${id} failed`);
+        }
     } catch (error) {
-        console.log(error);
-
-        callback(false, `Update contact information id ${ID_Contact} failed`, error);
+        console.error('Error updating contact in contact model:', error);
+        return callback(
+            false,
+            `Update contact information id ${id} failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 
 Contact.deleteContact = async (id, callback) => {
     try {
-        await pool.query(
+        const [result] = await pool.query(
             `
             DELETE FROM \`tb_contact\`
             WHERE ContactId = ?
         `,
             [id],
         );
-        callback(true, `Delete contact id ${id} successfully`);
+        if (result.affectedRows > 0) {
+            return callback(true, `Delete contact id ${id} successfully`);
+        } else {
+            return callback(false, `Delete contact id ${id} failed`);
+        }
     } catch (error) {
-        callback(false, `Delete contact id ${id} failed`, error);
+        console.error('Error deleting contact in contact model:', error);
+        return callback(
+            false,
+            `Delete contact id ${id} failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 module.exports = Contact;

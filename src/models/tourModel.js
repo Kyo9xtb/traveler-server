@@ -55,7 +55,7 @@ function DataFormat(data) {
 }
 Tour.getTour = async (slugIn, callback) => {
     try {
-        let [results] = await pool.query(
+        const [results] = await pool.query(
             `
             SELECT * FROM \`tb_tour\`
             `,
@@ -63,73 +63,88 @@ Tour.getTour = async (slugIn, callback) => {
         if (slugIn) {
             const result = DataFormat(results).find(({ slug }) => slug === slugIn);
             if (result) {
-                callback(true, `Get tour information ${slugIn} successfully`, result);
+                return callback(true, `Get tour information ${slugIn} successfully`, result);
             } else {
-                callback(false, `Get tour information ${slugIn} does not exist`);
+                return callback(false, `Get tour information ${slugIn} does not exist`);
             }
         } else {
-            callback(true, 'Get all tour information successfully', DataFormat(results));
+            return callback(true, 'Get all tour information successfully', DataFormat(results));
         }
     } catch (error) {
-        callback(false, 'Get all tour information failed', error);
+        console.error('Error getting tour information in model', error);
+        return callback(
+            false,
+            `Get all tour information failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 
-// Tour.getTourById = async (id, callback) => {
-//     try {
-//         let [result] = await pool.query(
-//             `
-//                 SELECT * FROM \`tb_tour\`
-//                 WHERE TourId =?
-//             `,
-//             [id],
-//         );
-//         if (result.length) {
-//             callback(true, `Get tour id ${id} successfully`, DataFormat(result));
-//         } else {
-//             callback(false, `Tour information id ${id} does not exist`);
-//         }
-//     } catch (error) {
-//         callback(false, `Get tour information id ${id} failed`, error);
-//     }
-// };
+Tour.getTourById = async (id, callback) => {
+    try {
+        const [result] = await pool.query(
+            `
+                SELECT * FROM \`tb_tour\`
+                WHERE TourId = ? 
+            `,
+            [id],
+        );
+        if (result.length) {
+            return callback(true, `Get tour id ${id} successfully`, DataFormat(result)[0]);
+        } else {
+            return callback(false, `Tour information id ${id} does not exist`);
+        }
+    } catch (error) {
+        console.error('Error getting tour information by id in model', error);
+        return callback(
+            false,
+            `Get tour information id ${id} failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
+    }
+};
 
 Tour.createTour = async (req, callback) => {
-    let { thumbnail, detailed_image } = req.files;
+    let Image;
+    let Thumbnail;
+    if (req.files) {
+        const { thumbnail, detailed_image } = req.files;
+        Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : null;
+        Thumbnail = thumbnail ? thumbnail[0].filename : null;
+    }
     let {
-        TourName,
-        TourGroup,
-        Area,
-        Price,
-        Sale,
-        DepartureSchedule,
-        Vehicle,
-        Time,
-        TourSummary,
-        TourProgram,
-        TourPolicy,
-        TermsConditions,
-        Trip,
-        GuestType,
+        tour_policy,
+        terms_conditions,
+        sale,
+        tour_name,
+        tour_summary,
+        tour_program,
+        trip,
+        tour_group,
+        area,
+        price,
+        departure_schedule,
+        vehicle,
+        time,
+        guest_type,
     } = req.body;
-    let Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : null;
-    let Thumbnail = thumbnail ? thumbnail[0].filename : null;
-    TourName = TourName ? TourName.trim() : null;
-    TourGroup = TourGroup ? TourGroup.trim() : null;
-    Area = Area ? Area.trim() : null;
-    Price = Price ? Price.trim() : null;
-    Sale = Sale ? Sale.trim() : null;
-    DepartureSchedule = DepartureSchedule ? DepartureSchedule.trim() : null;
-    Vehicle = Vehicle ? Vehicle.trim() : null;
-    Time = Time ? Time.trim() : null;
-    TourSummary = TourSummary ? TourSummary.trim() : null;
-    TourProgram = TourProgram ? TourProgram.trim() : null;
-    TourPolicy = TourPolicy ? TourPolicy.trim() : null;
-    TermsConditions = TermsConditions ? TermsConditions.trim() : null;
-    Trip = Trip ? Trip.trim() : null;
-    GuestType = GuestType ? GuestType.toString() : null;
+
+    tour_name = tour_name ? tour_name.trim() : null;
+    tour_group = tour_group ? tour_group.trim() : null;
+    area = area ? area.trim() : null;
+    price = price ? price.trim() : null;
+    sale = sale ? sale.trim() : null;
+    departure_schedule = departure_schedule ? departure_schedule.trim() : null;
+    vehicle = vehicle ? vehicle.trim() : null;
+    time = time ? time.trim() : null;
+    tour_summary = tour_summary ? tour_summary.trim() : null;
+    tour_program = tour_program ? tour_program.trim() : null;
+    tour_policy = tour_policy ? tour_policy.trim() : null;
+    terms_conditions = terms_conditions ? terms_conditions.trim() : null;
+    trip = trip ? trip.trim() : null;
+    guest_type = guest_type ? guest_type.toString() : null;
     try {
-        let [result] = await pool.query(
+        const [result] = await pool.query(
             `
             INSERT INTO \`tb_tour\` 
                 (TourName,
@@ -152,139 +167,32 @@ Tour.createTour = async (req, callback) => {
                 (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             `,
             [
-                TourName,
-                TourGroup,
-                Area,
-                Price,
-                Sale,
-                DepartureSchedule,
-                Vehicle,
-                Time,
-                TourSummary,
-                TourProgram,
-                TourPolicy,
-                TermsConditions,
-                Trip,
-                GuestType,
+                tour_name,
+                tour_group,
+                area,
+                price,
+                sale,
+                departure_schedule,
+                vehicle,
+                time,
+                tour_summary,
+                tour_program,
+                tour_policy,
+                terms_conditions,
+                trip,
+                guest_type,
                 Image,
                 Thumbnail,
             ],
         );
-        const folderName = `./src/public/images/tour/${result.insertId}`;
-        // Create Folder
-        handleCreateFolder(folderName);
-        // Copy file
-        if (thumbnail) {
-            handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
-        }
-        if (detailed_image) {
-            detailed_image.forEach((image) => {
-                handleCopyFile(image.path, `${folderName}/${image.filename}`);
-            });
-        }
-        // Callback
-        callback(true, `Create tour information successfully`);
-    } catch (error) {
-        callback(false, `Create tour information failed`, error);
-    }
-};
 
-Tour.updateTour = async (req, callback) => {
-    let { thumbnail, detailed_image } = req.files;
-    let { id } = req.params;
-    let [result] = await pool.query(
-        `
-        SELECT * FROM \`tb_tour\`
-        WHERE TourId =?
-        `,
-        [id],
-    );
-    let {
-        TourName,
-        TourGroup,
-        Area,
-        Price,
-        Sale,
-        DepartureSchedule,
-        Vehicle,
-        Time,
-        TourSummary,
-        TourProgram,
-        TourPolicy,
-        TermsConditions,
-        Trip,
-        GuestType,
-    } = req.body;
-    let Image = detailed_image ? detailed_image.map((image) => image.filename).join(',') : result[0].Image;
-    let Thumbnail = thumbnail ? thumbnail[0].filename : result[0].Thumbnail;
-    TourName = TourName ? TourName.trim() : null;
-    TourGroup = TourGroup ? TourGroup.trim() : null;
-    Area = Area ? Area.trim() : null;
-    Price = Price ? Price.trim() : null;
-    Sale = Sale ? Sale.trim() : null;
-    DepartureSchedule = DepartureSchedule ? DepartureSchedule.trim() : null;
-    Vehicle = Vehicle ? Vehicle.trim() : null;
-    Time = Time ? Time.trim() : null;
-    TourSummary = TourSummary ? TourSummary.trim() : null;
-    TourProgram = TourProgram ? TourProgram.trim() : null;
-    TourPolicy = TourPolicy ? TourPolicy.trim() : null;
-    TermsConditions = TermsConditions ? TermsConditions.trim() : null;
-    Trip = Trip ? Trip.trim() : null;
-    GuestType = GuestType ? GuestType.toString() : null;
-    if (detailed_image && result[0].Image) {
-        result[0].Image.split(',').forEach((image) => {
-            handleDeleteFile(`./src/public/images/tour/${id}/${image}`);
-        });
-    }
-    if (thumbnail && result[0].Thumbnail) {
-        handleDeleteFile(`./src/public/images/tour/${id}/${result[0].Thumbnail}`);
-    }
-    if (result.length) {
-        try {
-            if (Thumbnail || Image) {
-                await pool.query(
-                    `
-                UPDATE \`tb_tour\` SET 
-                    TourName = ?,
-                    TourGroup = ?,
-                    Area = ?,
-                    Price = ?,
-                    Sale = ?,
-                    DepartureSchedule = ?,
-                    Vehicle = ?,
-                    Time = ?,
-                    TourSummary = ?,
-                    TourProgram = ?,
-                    TourPolicy = ?,
-                    TermsConditions = ?,
-                    Trip = ?,
-                    GuestType = ?,
-                    Image = ?,
-                    Thumbnail = ?
-                WHERE TourId = ?
-            `,
-                    [
-                        TourName,
-                        TourGroup,
-                        Area,
-                        Price,
-                        Sale,
-                        DepartureSchedule,
-                        Vehicle,
-                        Time,
-                        TourSummary,
-                        TourProgram,
-                        TourPolicy,
-                        TermsConditions,
-                        Trip,
-                        GuestType,
-                        Image,
-                        Thumbnail,
-                        id,
-                    ],
-                );
-                const folderName = `./src/public/images/tour/${id}`;
-                handleCreateFolder(folderName);
+        if (result.affectedRows > 0) {
+            const folderName = `./src/public/images/tour/${result.insertId}`;
+            // Create Folder
+            handleCreateFolder(folderName);
+            // Copy file
+            if (req.files) {
+                const { thumbnail, detailed_image } = req.files;
                 if (thumbnail) {
                     handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
                 }
@@ -293,79 +201,195 @@ Tour.updateTour = async (req, callback) => {
                         handleCopyFile(image.path, `${folderName}/${image.filename}`);
                     });
                 }
-            } else {
-                await pool.query(
-                    `
-                UPDATE \`tb_tour\` SET 
-                    TourName = ?,
-                    TourGroup = ?,
-                    Area = ?,
-                    Price = ?,
-                    Sale = ?,
-                    DepartureSchedule = ?,
-                    Vehicle = ?,
-                    Time = ?,
-                    TourSummary = ?,
-                    TourProgram = ?,
-                    TourPolicy = ?,
-                    TermsConditions = ?,
-                    Trip = ?,
-                    GuestType = ?
-                WHERE TourId = ?
-            `,
-                    [
-                        TourName,
-                        TourGroup,
-                        Area,
-                        Price,
-                        Sale,
-                        DepartureSchedule,
-                        Vehicle,
-                        Time,
-                        TourSummary,
-                        TourProgram,
-                        TourPolicy,
-                        TermsConditions,
-                        Trip,
-                        GuestType,
-                        id,
-                    ],
-                );
             }
-            callback(true, `Update tour information ID ${id} successfully`);
-        } catch (error) {
-            console.log(error);
+            // Callback
+            return callback(true, `Create tour information successfully`);
+        } else {
+            return callback(true, `Create tour information failed`);
+        }
+    } catch (error) {
+        console.error('Error create tour information in model', error);
+        return callback(
+            false,
+            `Create tour information failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
+    }
+};
 
-            callback(false, `Update news information id ${id} failed`, error);
+Tour.updateTour = async (req, callback) => {
+    let { id } = req.params;
+    try {
+        const [result] = await pool.query(
+            `
+            SELECT * FROM \`tb_tour\`
+            WHERE TourId =?
+            `,
+            [id],
+        );
+        if (result.length === 0) {
+            if (req.files && req.files.thumbnail) {
+                handleDeleteFile(req.files.thumbnail[0].path);
+            }
+            if (req.files && req.files.detailed_image) {
+                req.files.detailed_image.forEach((image) => {
+                    handleDeleteFile(image.path);
+                });
+            }
+            return callback(false, `Tour information ID ${id} does not exist`);
         }
-    } else {
-        if (thumbnail) {
-            handleDeleteFile(thumbnail[0].path);
+        let {
+            TourName,
+            TourGroup,
+            Area,
+            Price,
+            Sale,
+            DepartureSchedule,
+            Vehicle,
+            Time,
+            TourSummary,
+            TourProgram,
+            TourPolicy,
+            TermsConditions,
+            Trip,
+            GuestType,
+            Image,
+            Thumbnail,
+        } = result[0];
+        if (req.files) {
+            const { thumbnail, detailed_image } = req.files;
+            Thumbnail = thumbnail ? thumbnail[0].filename : Thumbnail;
+            Image = detailed_image ? detailed_image.map((image) => image.filename).toString() : Image;
+            if (detailed_image && result[0].Image) {
+                result[0].Image.split(',').forEach((image) => {
+                    handleDeleteFile(`./src/public/images/tour/${id}/${image}`);
+                });
+            }
+            if (thumbnail && result[0].Thumbnail) {
+                handleDeleteFile(`./src/public/images/tour/${id}/${result[0].Thumbnail}`);
+            }
         }
-        if (detailed_image) {
-            detailed_image.forEach((image) => {
-                handleDeleteFile(image.path);
-            });
+        let {
+            tour_policy,
+            terms_conditions,
+            sale,
+            tour_name,
+            tour_summary,
+            tour_program,
+            trip,
+            tour_group,
+            area,
+            price,
+            departure_schedule,
+            vehicle,
+            time,
+            guest_type,
+        } = req.body;
+
+        tour_name = tour_name ? tour_name.trim() : TourName;
+        tour_group = tour_group ? tour_group.trim() : TourGroup;
+        area = area ? area.trim() : Area;
+        price = price ? price.trim() : Price;
+        sale = sale ? sale.trim() : Sale;
+        departure_schedule = departure_schedule ? departure_schedule.trim() : DepartureSchedule;
+        vehicle = vehicle ? vehicle.trim() : Vehicle;
+        time = time ? time.trim() : Time;
+        tour_summary = tour_summary ? tour_summary.trim() : TourSummary;
+        tour_program = tour_program ? tour_program.trim() : TourProgram;
+        tour_policy = tour_policy ? tour_policy.trim() : TourPolicy;
+        terms_conditions = terms_conditions ? terms_conditions.trim() : TermsConditions;
+        trip = trip ? trip.trim() : Trip;
+        guest_type = guest_type ? guest_type.toString() : GuestType;
+
+        await pool.query(
+            `
+        UPDATE \`tb_tour\` SET 
+            TourName = ?,
+            TourGroup = ?,
+            Area = ?,
+            Price = ?,
+            Sale = ?,
+            DepartureSchedule = ?,
+            Vehicle = ?,
+            Time = ?,
+            TourSummary = ?,
+            TourProgram = ?,
+            TourPolicy = ?,
+            TermsConditions = ?,
+            Trip = ?,
+            GuestType = ?,
+            Image = ?,
+            Thumbnail = ?
+        WHERE TourId = ?
+    `,
+            [
+                tour_name,
+                tour_group,
+                area,
+                price,
+                sale,
+                departure_schedule,
+                vehicle,
+                time,
+                tour_summary,
+                tour_program,
+                tour_policy,
+                terms_conditions,
+                trip,
+                guest_type,
+                Image,
+                Thumbnail,
+                id,
+            ],
+        );
+        const folderName = `./src/public/images/tour/${id}`;
+        handleCreateFolder(folderName);
+        if (req.files) {
+            const { thumbnail, detailed_image } = req.files;
+            if (thumbnail) {
+                handleCopyFile(thumbnail[0].path, `${folderName}/${thumbnail[0].filename}`);
+            }
+            if (detailed_image) {
+                detailed_image.forEach((image) => {
+                    handleCopyFile(image.path, `${folderName}/${image.filename}`);
+                });
+            }
         }
-        callback(false, `Tour information ID ${id} does not exist`);
+        callback(true, `Update tour information ID ${id} successfully`);
+    } catch (error) {
+        console.error('Error update tour information in model', error);
+        callback(
+            false,
+            `Update news information id ${id} failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 
 Tour.deleteTour = async (id, callback) => {
     try {
-        await pool.query(
+        const [result] = await pool.query(
             `
             DELETE FROM \`tb_tour\`
-            WHERE TourId =?
+            WHERE TourId = ?
             `,
             [id],
         );
-        // Delete folder
-        handleDeleteFolder(`./src/public/images/tour/${id}`);
-        // Callback
-        callback(true, `Delete tour information id ${id} successfully`);
+        if (result.affectedRows > 0) {
+            // Delete folder
+            handleDeleteFolder(`./src/public/images/tour/${id}`);
+            // Callback
+            return callback(true, `Delete tour information id ${id} successfully`);
+        } else {
+            return callback(false, `Tour information ID ${id} does not exist`);
+        }
     } catch (error) {
-        callback(false, `Delete tour information id ${id} failed`, error);
+        console.error('Error delete tour information in model', error);
+        callback(
+            false,
+            `Delete tour information id ${id} failed. A server-side problem occurred. Please come back later.`,
+            error,
+        );
     }
 };
 module.exports = Tour;
