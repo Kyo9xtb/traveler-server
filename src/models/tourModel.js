@@ -85,7 +85,7 @@ Tour.getTourById = async (id, callback) => {
         const [result] = await pool.query(
             `
                 SELECT * FROM \`tb_tour\`
-                WHERE TourId = ? 
+                WHERE TourId = ?
             `,
             [id],
         );
@@ -203,9 +203,9 @@ Tour.createTour = async (req, callback) => {
                 }
             }
             // Callback
-            return callback(true, `Create tour information successfully`);
+            return callback(true, `Create tour information successfully`, result.insertId);
         } else {
-            return callback(true, `Create tour information failed`);
+            return callback(false, `Create tour information failed`);
         }
     } catch (error) {
         console.error('Error create tour information in model', error);
@@ -355,7 +355,7 @@ Tour.updateTour = async (req, callback) => {
                 });
             }
         }
-        callback(true, `Update tour information ID ${id} successfully`);
+        callback(true, `Update tour information ID ${id} successfully`, id);
     } catch (error) {
         console.error('Error update tour information in model', error);
         callback(
@@ -368,6 +368,17 @@ Tour.updateTour = async (req, callback) => {
 
 Tour.deleteTour = async (id, callback) => {
     try {
+        const [resultData] = await pool.query(
+            `
+                SELECT * FROM \`tb_tour\`
+                WHERE TourId = ?
+            `,
+            [id],
+        );
+
+        if (resultData.length === 0) {
+            return callback(false, `Tour information ID ${id} does not exist`);
+        }
         const [result] = await pool.query(
             `
             DELETE FROM \`tb_tour\`
@@ -379,7 +390,7 @@ Tour.deleteTour = async (id, callback) => {
             // Delete folder
             handleDeleteFolder(`./src/public/images/tour/${id}`);
             // Callback
-            return callback(true, `Delete tour information id ${id} successfully`);
+            return callback(true, `Delete tour information id ${id} successfully`, resultData[0]);
         } else {
             return callback(false, `Tour information ID ${id} does not exist`);
         }

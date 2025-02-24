@@ -48,7 +48,7 @@ const handleLogout = async (req, res, next) => {
         next(error);
     }
 };
-
+ 
 const handleCheckLogin = async (req, res, next) => {
     try {
         const { sessionID } = req.cookies;
