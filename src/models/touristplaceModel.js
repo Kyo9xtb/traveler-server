@@ -123,7 +123,7 @@ TourPlace.createTourPlace = async (req, callback) => {
             [location_name, description, details, tour_group, area, Image, Thumbnail],
         );
         if (result.affectedRows === 0) {
-            return callback(true, `Create tourist place failed`);
+            return callback(false, `Create tourist place failed`);
         } else {
             const folderName = `./src/public/images/tourist_place/${result.insertId}`;
             // Create folder
@@ -141,7 +141,7 @@ TourPlace.createTourPlace = async (req, callback) => {
                 }
             }
             // callback
-            return callback(true, `Create tourist place successfully`);
+            return callback(true, `Create tourist place successfully`, result.insertId);
         }
     } catch (error) {
         console.error('Error creating tourist place in model:', error);
@@ -221,7 +221,7 @@ TourPlace.updateTourPlace = async (req, callback) => {
                     });
                 }
             }
-            return callback(true, `Update tourist place ID ${id} successfully`);
+            return callback(true, `Update tourist place ID ${id} successfully`, id);
         } else {
             return callback(false, `Update tourist place ID ${id} failed`);
         }
@@ -237,6 +237,17 @@ TourPlace.updateTourPlace = async (req, callback) => {
 
 TourPlace.deleteTourPlace = async (id, callback) => {
     try {
+        const [resultData] = await pool.query(
+            `
+                SELECT * FROM \`tb_tourist-place\`
+                WHERE LocationId = ?
+            `,
+            [id],
+        );
+
+        if (resultData.length === 0) {
+            return callback(false, `Tour information ID ${id} does not exist`);
+        }
         const [result] = await pool.query(
             `
             DELETE FROM \`tb_tourist-place\`
@@ -250,7 +261,7 @@ TourPlace.deleteTourPlace = async (id, callback) => {
             // Delete folder
             handleDeleteFolder(`./src/public/images/tourist_place/${id}`);
             // Callback
-            return callback(true, `Delete tourist places ID ${id}  successfully`);
+            return callback(true, `Delete tourist places ID ${id}  successfully`, result[0]);
         }
     } catch (error) {
         console.error('Error deleting tourist place in model:', error);
